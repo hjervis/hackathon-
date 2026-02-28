@@ -1,11 +1,18 @@
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query
 from typing import Dict
+from dotenv import load_dotenv
+import httpx
+import os
 
+# loads environemnt variables
+load_dotenv()
 
 app = FastAPI()
 
 # Dictionary that will keep track of currently connected clients
 clients: Dict[str, WebSocket] = {}
+
+CLERK_SECRET_KEY = os.getenv("CLERK_SECRET_KEY")
 
 
 @app.websocket("/ws/{client_id}")
