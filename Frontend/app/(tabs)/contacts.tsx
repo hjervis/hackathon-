@@ -1,3 +1,4 @@
+import { fetchContacts } from "@/api/api";
 import { useEffect, useState } from "react";
 import {
     FlatList,
@@ -27,14 +28,26 @@ export default function ContactsScreen() {
   const [error, setError] = useState<string | null>(null);
 
   // Loading contacts on screen open
-  useEffect;
+  useEffect(() => {
+    const loadContacts = async () => {
+      try {
+        const data = await fetchContacts();
+        setContacts(data);
+      } catch (e: any) {
+        setError("failed to load contacts");
+      } finally {
+        setLoadingContacts(false);
+      }
+    };
+    loadContacts();
+  });
 
   const addContact = () => {
     if (!name.trim() || !phone.trim()) return;
     const newContact: Contact = {
       id: Date.now().toString(), // temp id until backend is up
-      name: name.trim(),
-      phone: phone.trim(),
+      contact_name: name.trim(),
+      contact_phone: phone.trim(),
     };
 
     setContacts((prev) => [...prev, newContact]);
@@ -93,14 +106,14 @@ export default function ContactsScreen() {
               {/* Avatar initial */}
               <View style={styles.avatar}>
                 <Text style={styles.avatarText}>
-                  {item.name[0].toUpperCase()}
+                  {item.contact_name[0].toUpperCase()}
                 </Text>
               </View>
 
               {/* Name + phone */}
               <View style={{ flex: 1 }}>
-                <Text style={styles.contactName}>{item.name}</Text>
-                <Text style={styles.contactPhone}>{item.phone}</Text>
+                <Text style={styles.contactName}>{item.contact_name}</Text>
+                <Text style={styles.contactPhone}>{item.contact_phone}</Text>
               </View>
 
               {/* Remove button */}
