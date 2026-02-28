@@ -24,3 +24,18 @@ def create_user(user_data, db: Session):
     db.refresh(new_user)
 
     return new_user
+
+def authenticate_user(email: str, password: str, db: Session):
+    """
+    Returns the User object if email/password match, otherwise None.
+    """
+    # Find user by email
+    user = db.query(User).filter(User.email == email).first()
+    if not user:
+        return None
+    
+    # Verify password
+    if not bcrypt.verify(password, user.password_hash):
+        return None
+    
+    return user
