@@ -10,7 +10,7 @@ export default function EmergencyScreen() {
   const [sessionActive, setSessionActive] = useState(false);
   const locationSub = useRef<Location.LocationSubscription | null>(null);
   const sessionIdRef = useRef<number | null>(null);
-  const listenerRemover = useRef<() => void>();
+  const listenerRemover = useRef<(() => void) | undefined>(undefined);
 
 
   const startSharing = async () => {
@@ -86,7 +86,6 @@ export default function EmergencyScreen() {
     sessionIdRef.current = null;
     setSessionActive(false);
   };
->>>>>>> 986889087e5bc63b1a97d288dad034498cd96efd
 
 
   const handlePress = async () => {
