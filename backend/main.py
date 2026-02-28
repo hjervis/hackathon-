@@ -20,6 +20,17 @@ load_dotenv()
 # Create FastAPI instance
 app = FastAPI(title="Public Safety App")
 
+from Database.database import engine, Base
+
+# import ALL models so SQLAlchemy knows about them
+from Models import user
+from Models import trusted_contacts
+from Models import location_sessions
+from Models import location
+
+# Create tables in the DB if they don't exist
+Base.metadata.create_all(bind=engine)
+
 # Include authentication routes
 app.include_router(auth_router)
 app.include_router(trusted_contactsController.router)
