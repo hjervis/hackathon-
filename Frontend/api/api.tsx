@@ -1,15 +1,16 @@
-import * as SecureStore from "expo-secure-store";
+// storage helper handles secure store on native platforms and localStorage on web
+import { getItem } from "../utils/storage";
 
 const API_URL = process.env.EXPO_PUBLIC_IP_ADDRESS;
 
 // Helper to get the token
-export async function getToken() {
-  return await SecureStore.getItemAsync("token");
+export async function getToken(): Promise<string | null> {
+  return await getItem("token");
 }
 
 // Helper to get current user's id
 async function getUserId(): Promise<number> {
-  const userJson = await SecureStore.getItemAsync("user");
+  const userJson = await getItem("user");
   if (!userJson) throw new Error("Not logged in");
   const user = JSON.parse(userJson);
   return user.id;

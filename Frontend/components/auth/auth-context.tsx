@@ -1,5 +1,9 @@
 import { router } from "expo-router";
-import * as SecureStore from "expo-secure-store";
+// replace direct secure-store usage with our wrapper that handles web fallbacks
+// We no longer call expo-secure-store directly; use the storage wrapper so
+// web builds fall back to localStorage.  The import below is only kept for
+// reference; TypeScript will cropp it during transpilation.
+import { setItem, getItem, deleteItem } from "../../utils/storage";
 import { createContext, useContext, useEffect, useState } from "react";
 import { login as loginApi, register as registerApi } from "../../api/api";
 
@@ -31,8 +35,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const loadAuth = async () => {
       try {
-        const savedToken = await SecureStore.getItemAsync("token");
-        const savedUser = await SecureStore.getItemAsync("user");
+        const savedToken = await getItem("token");
+        const savedUser = await getItem("user");
 
         if (savedToken && savedUser) {
           setToken(savedToken);
@@ -57,8 +61,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const data = await loginApi(email, password);
 
       // Save token and user
-      await SecureStore.setItemAsync("token", data.token);
-      await SecureStore.setItemAsync("user", JSON.stringify(data.user));
+      await setItem("token", data.token);
+      await setItem("user", JSON.stringify(data.user));
 
       setToken(data.token);
       setUser(data.user);
@@ -86,8 +90,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   // Logout function
   const logout = async () => {
-    await SecureStore.deleteItemAsync("token");
-    await SecureStore.deleteItemAsync("user");
+    await deleteItem("token");
+    await deleteItem("user");
     setToken(null);
     setUser(null);
     router.replace("/(auth)/sign-in");

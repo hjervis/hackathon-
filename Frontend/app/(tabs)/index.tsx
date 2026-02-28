@@ -1,22 +1,83 @@
 import { router } from "expo-router";
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { SafeAreaView, StyleSheet, Text, TouchableOpacity } from "react-native";
+import * as Location from "expo-location";
+
+const SERVER_URL = process.env.EXPO_PUBLIC_IP_ADDRESS?.replace("http", "ws");
 
 export default function EmergencyScreen() {
   const [sessionActive, setSessionActive] = useState(false);
+  const wsRef = useRef<WebSocket | null>(null);
+  const locationRef = useRef<Location.LocationSubscription | null>(null);
 
-  const handlePress = () => {
+  // connect to websocket when component loads
+  useEffect(() => {
+    // TODO: replace "test-user" with the actual logged in user's name from your auth system
+    const ws = new WebSocket(`${SERVER_URL}/ws/test-user`);
+    wsRef.current = ws;
+
+    ws.onopen = () => console.log("WebSocket connected!");
+    ws.onclose = () => console.log("WebSocket disconnected!");
+    ws.onerror = (e) => console.log("WebSocket error:", e);
+
+    // cleanup websocket when component unmounts
+    return () => ws.close();
+  }, []);
+
+  const handlePress = async () => {
     if (sessionActive) {
+      // stop the session — stop sending location updates
       setSessionActive(false);
+      if (locationRef.current) {
+        locationRef.current.remove();
+        locationRef.current = null;
+      }
     } else {
+      // start the session
       setSessionActive(true);
+
+      // request location permission
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== "granted") {
+        console.log("Location permission denied");
+        return;
+      }
+
+      // get current location to send with the emergency alert
+      const location = await Location.getCurrentPositionAsync({});
+      const { latitude, longitude } = location.coords;
+
+      // send emergency alert with current location
+      // TODO: replace emergency_contact and user_name with real values from your auth/database
+      if (wsRef.current?.readyState === WebSocket.OPEN) {
+        wsRef.current.send(JSON.stringify({
+          type: "emergency_alert",
+          lat: latitude,
+          lng: longitude,
+          user_name: "Test User",
+          emergency_contact: "+19495620239"
+        }));
+      }
+
+      // start sending live location updates every 5 seconds
+      locationRef.current = await Location.watchPositionAsync(
+        { accuracy: Location.Accuracy.High, timeInterval: 5000, distanceInterval: 5 },
+        (loc) => {
+          if (wsRef.current?.readyState === WebSocket.OPEN) {
+            wsRef.current.send(JSON.stringify({
+              type: "location_update",
+              lat: loc.coords.latitude,
+              lng: loc.coords.longitude,
+            }));
+          }
+        }
+      );
     }
   };
 
   return (
     <SafeAreaView style={styles.container}>
       <Text style={styles.title}>SafeSignal</Text>
-
       <TouchableOpacity
         style={[styles.sosButton, sessionActive && styles.sosButtonActive]}
         onPress={handlePress}
@@ -27,13 +88,11 @@ export default function EmergencyScreen() {
           {sessionActive ? "Tap to end" : "Tap for help"}
         </Text>
       </TouchableOpacity>
-
       <TouchableOpacity
         onPress={() => router.push("../../app/(tabs)/fake-call")}
       >
         <Text>📞 Fake Call</Text>
       </TouchableOpacity>
-
       <Text style={styles.statusText}>
         {sessionActive ? "Session active" : "Standby"}
       </Text>
