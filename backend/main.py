@@ -25,7 +25,7 @@ from Database.database import engine, Base
 # import ALL models so SQLAlchemy knows about them
 from Models import user
 from Models import trusted_contacts
-from Models import location_session
+from Models import location_sessions
 from Models import location
 
 # Create tables in the DB if they don't exist
