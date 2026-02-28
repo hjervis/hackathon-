@@ -9,6 +9,7 @@ export default function EmergencyScreen() {
   const { token, user, sendSocket, addSocketListener } = useAuth();
   const [sessionActive, setSessionActive] = useState(false);
   const locationSub = useRef<Location.LocationSubscription | null>(null);
+  const pollingActiveRef = useRef(false);
   const sessionIdRef = useRef<number | null>(null);
   const listenerRemover = useRef<(() => void) | undefined>(undefined);
 
@@ -47,9 +48,9 @@ export default function EmergencyScreen() {
     });
 
     console.log("[Location] Starting location polling...");
-    let isActive = true;
+    pollingActiveRef.current = true;
     const pollLocation = async () => {
-      while (isActive) {
+      while (pollingActiveRef.current) {
         try {
           const loc = await Location.getCurrentPositionAsync({
             accuracy: Location.Accuracy.Highest,
@@ -68,16 +69,13 @@ export default function EmergencyScreen() {
         }
       }
     };
-    
     locationSub.current = {
       remove: () => {
-        isActive = false;
+        pollingActiveRef.current = false;
       }
     } as any;
-    
     pollLocation();
     console.log("[Location] Location polling started");
-
     setSessionActive(true);
   };
 
@@ -87,6 +85,7 @@ export default function EmergencyScreen() {
     if (sendSocket) {
       sendSocket({ type: "end_session", session_id: sessionIdRef.current });
     }
+    pollingActiveRef.current = false;
     if (locationSub.current) {
       try {
         locationSub.current.remove?.();
