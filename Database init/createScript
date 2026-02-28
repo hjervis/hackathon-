@@ -1,0 +1,49 @@
+CREATE DATABASE IF NOT EXISTS publicsafety_db;
+USE publicsafety_db;
+
+CREATE TABLE users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    email VARCHAR(100) NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    phone VARCHAR(20),
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE trusted_contacts (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    contact_user_id INT,
+    contact_name VARCHAR(100) NOT NULL,
+    contact_phone VARCHAR(20),
+    contact_email VARCHAR(100),
+    status ENUM('pending', 'accepted', 'blocked', 'invited') DEFAULT 'invited',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (contact_user_id) REFERENCES users(id) ON DELETE SET NULL,
+    CONSTRAINT chk_contact CHECK (contact_phone IS NOT NULL OR contact_email IS NOT NULL),
+    UNIQUE KEY unique_contact (user_id, contact_user_id),
+    UNIQUE KEY unique_phone_contact (user_id, contact_phone),
+    UNIQUE KEY unique_email_contact (user_id, contact_email)
+);
+
+CREATE TABLE location_sessions (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    started_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    ended_at DATETIME,
+    is_active BOOLEAN DEFAULT TRUE,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE locations (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    user_id INT NOT NULL,
+    session_id INT,
+    latitude DECIMAL(9,6) NOT NULL,
+    longitude DECIMAL(9,6) NOT NULL,
+    accuracy FLOAT,
+    timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (session_id) REFERENCES location_sessions(id) ON DELETE SET NULL
+);
