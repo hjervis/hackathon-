@@ -15,8 +15,8 @@ import { getToken } from "../../api/api";
 
 const API_URL = process.env.EXPO_PUBLIC_IP_ADDRESS;
 
-// Pause between segments (ms) — simulates user responding
-const RESPONSE_PAUSE_MS = 3500;
+// Pause between segments to simulates user responding
+const RESPONSE_PAUSE_MS = 3000;
 
 type CallState = "ringing" | "active" | "ended";
 
@@ -87,6 +87,7 @@ export default function FakeCallScreen() {
   };
 
   const handleAnswer = async () => {
+    console.log("handleAnswer called"); // add this
     Vibration.cancel();
     activeRef.current = true;
     setCallState("active");
@@ -114,10 +115,12 @@ export default function FakeCallScreen() {
   };
 
   const playSegment = async (segment: number, convIndex: number) => {
+    console.log("playSegment called", segment, convIndex);
     if (!activeRef.current) return;
 
     try {
       const token = await getToken();
+      console.log("Got token:", !!token);
       setIsPlaying(true);
 
       const response = await fetch(
@@ -126,6 +129,12 @@ export default function FakeCallScreen() {
           method: "POST",
           headers: { Authorization: `Bearer ${token}` },
         },
+      );
+
+      console.log("Response status:", response.status);
+      console.log(
+        "Response headers:",
+        response.headers.get("X-Conversation-Index"),
       );
 
       // 404 means no more segments — conversation is done
