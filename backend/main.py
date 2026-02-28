@@ -3,11 +3,14 @@ from typing import Dict
 from dotenv import load_dotenv
 from twilio_service import send_emergency_sms
 import os
+from Controllers.auth import router as auth_router
+app = FastAPI()
+
+app.include_router(auth_router)
 
 # loads environemnt variables
 load_dotenv()
 
-app = FastAPI()
 
 # Dictionary that will keep track of currently connected clients
 clients: Dict[str, WebSocket] = {}
