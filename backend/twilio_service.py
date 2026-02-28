@@ -13,15 +13,15 @@ TWILIO_PHONE_NUMBER = os.getenv("TWILIO_PHONE_NUMBER")
 # Creatimg twlio client
 twilio_client = Client(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN)
 
-def send_emergency_sms(to_number: str, user_name: str, lat: float, lng: float):
-    maps_link = f"https://maps.google.com/?q={lat},{lng}"
+def send_emergency_sms(to_number: str, user_name: str, lat: float, lng: float, user_id: str):
+    tracking_link = f"http://YOUR_SERVER_ADDRESS/track/{user_id}"
 
     try:
         message = twilio_client.messages.create(
             body = (
                 f"🚨 EMERGENCY ALERT\n"
                 f"{user_name} has triggered an emergency. \n"
-                f"Current location: {maps_link}\n"
+                f"Current location: {tracking_link}\n"
             ),
             from_=f"whatsapp:{TWILIO_PHONE_NUMBER}",
             to=f"whatsapp:{to_number}"
