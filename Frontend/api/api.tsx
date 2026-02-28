@@ -4,7 +4,15 @@ const API_URL = process.env.EXPO_PUBLIC_IP_ADDRESS;
 
 // Helper to get the token
 export async function getToken() {
-  return await SecureStore.getItem("token");
+  return await SecureStore.getItemAsync("token");
+}
+
+// Helper to get current user's id
+async function getUserId(): Promise<number> {
+  const userJson = await SecureStore.getItemAsync("user");
+  if (!userJson) throw new Error("Not logged in");
+  const user = JSON.parse(userJson);
+  return user.id;
 }
 
 // Login function
@@ -38,7 +46,8 @@ export async function register(
 // Example: fetch contacts
 export async function fetchContacts() {
   const token = await getToken();
-  const res = await fetch(`${API_URL}/contacts`, {
+  const userId = await getUserId();
+  const res = await fetch(`${API_URL}/users/${userId}/contacts`, {
     headers: { Authorization: `Bearer ${token}` },
   });
   const data = await res.json();
@@ -49,7 +58,8 @@ export async function fetchContacts() {
 // Add new contacts
 export async function addContact(contact_name: string, contact_phone: string) {
   const token = await getToken();
-  const res = await fetch(`${API_URL}/contacts`, {
+  const userId = await getUserId();
+  const res = await fetch(`${API_URL}/users/${userId}/contacts`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
@@ -65,7 +75,8 @@ export async function addContact(contact_name: string, contact_phone: string) {
 // Delete contact by ID
 export async function deleteContact(id: string) {
   const token = await getToken();
-  const res = await fetch(`${API_URL}/contacts/${id}`, {
+  const userId = await getUserId();
+  const res = await fetch(`${API_URL}/users/${userId}/contacts/${id}`, {
     method: "DELETE",
     headers: { Authorization: `Bearer ${token}` },
   });
