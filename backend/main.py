@@ -2,7 +2,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 
-from Controllers.fakeCall import router as fake_call_router
+from Controllers.fake_call import router as fake_call_router
 from Controllers import trusted_contactsController, location_sessionController
 from Controllers.auth import router as auth_router
 from Services import location_sessionService, trusted_contactsService
@@ -25,7 +25,7 @@ app = FastAPI(title="Public Safety App")
 app.include_router(auth_router)
 app.include_router(trusted_contactsController.router)
 app.include_router(location_sessionController.router)
-app.include_router(fake_call_router.router)
+app.include_router(fake_call_router)
 
 # Enable CORS so frontend can communicate with backend
 origins = [
