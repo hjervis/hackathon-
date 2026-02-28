@@ -1,6 +1,8 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
+
+from Controllers import trusted_contactsController
 from Controllers.auth import router as auth_router
 from dotenv import load_dotenv
 from typing import Dict
@@ -15,6 +17,7 @@ app = FastAPI(title="Public Safety App")
 
 # Include authentication routes
 app.include_router(auth_router)
+app.include_router(trusted_contactsController.router)
 
 # Enable CORS so frontend can communicate with backend
 origins = [
