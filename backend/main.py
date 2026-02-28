@@ -1,4 +1,6 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Query
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
 from typing import Dict
 from dotenv import load_dotenv
 from twilio_service import send_emergency_sms
@@ -11,6 +13,11 @@ app = FastAPI()
 
 # Dictionary that will keep track of currently connected clients
 clients: Dict[str, WebSocket] = {}
+
+@app.get("/track/{user_id}", response_class=HTMLResponse)
+async def tracking_page(user_id: str):
+    with open("track.html", "r") as f:
+        return f.read()
 
 @app.websocket("/ws/{client_id}")
 async def websocket_endpoint(
@@ -46,7 +53,8 @@ async def websocket_endpoint(
                     to_number=data["emergency_contact"],
                     user_name=data["user_name"],
                     lat=data["lat"],
-                    lng=data["lng"]
+                    lng=data["lng"],
+                    user_id=client_id
                 )
     
     # raised as soon as client disconnects 
