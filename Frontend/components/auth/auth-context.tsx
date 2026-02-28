@@ -46,8 +46,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     if (token && user) {
       const base = process.env.EXPO_PUBLIC_IP_ADDRESS || "http://localhost:8000";
-      // Always use wss:// for production (secure) WebSocket connections
-      const WS_URL = base.replace(/^https?:/, "wss:");
+      const WS_URL = base.replace(/^http/, "ws");
       const wsUrl = `${WS_URL}/ws/${user.id}?token=${token}`;
       console.log("[WebSocket] Connecting to:", wsUrl);
       const ws = new WebSocket(wsUrl);
@@ -190,6 +189,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
       console.log("[WebSocket] Sending:", msg);
       socketRef.current.send(JSON.stringify(msg));
+    } else {
+      console.warn("[WebSocket] Socket not ready. State:", socketRef.current?.readyState, "Message:", msg);
     }
   };
   const addSocketListener = (cb: (msg: any) => void) => {

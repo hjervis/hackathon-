@@ -12,11 +12,7 @@ export default function SignUp() {
   const [localError, setLocalError] = useState<string | null>(null);
 
   const handleRegister = async () => {
-    const success = await register(username.trim(), email.trim(), password, phone.trim());
-    if (!success) {
-      // Error is already set in context, but you can add more UI feedback here if desired
-      console.log('Registration failed:', error);
-    }
+    await register(username.trim(), email.trim(), password, phone.trim());
   };
 
   // propagate errors to local state so we can auto‑clear them
