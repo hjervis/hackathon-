@@ -143,13 +143,32 @@ async def websocket_endpoint(websocket: WebSocket, client_id: str, token: str = 
                         })
 
             elif message_type == "emergency_alert":
-                send_emergency_sms(
-                    to_number=data.get("emergency_contact"),
-                    user_name=data.get("user_name"),
-                    lat=data.get("lat"),
-                    lng=data.get("lng"),
-                    user_id=user_id,
-                )
+                user = db.query(User).filter(User.id == user_id).first()
+                lat = data.get("lat")
+                lng = data.get("lng")
+                
+                # For testing: send emergency alert to user's own phone number
+                if user and user.phone:
+                    send_emergency_sms(
+                        to_number=user.phone,
+                        user_name=user.username,
+                        lat=lat,
+                        lng=lng,
+                        user_id=user_id,
+                    )
+                
+                # Also send to all accepted trusted contacts
+                contact_ids = trusted_contactsService.get_accepted_contact_ids(db, user_id)
+                for cid in contact_ids:
+                    contact = db.query(User).filter(User.id == cid).first()
+                    if contact and contact.phone:
+                        send_emergency_sms(
+                            to_number=contact.phone,
+                            user_name=user.username,
+                            lat=lat,
+                            lng=lng,
+                            user_id=user_id,
+                        )
 
     except WebSocketDisconnect:
         if user_id in clients:

@@ -10,7 +10,7 @@ export default function EmergencyScreen() {
   const [sessionActive, setSessionActive] = useState(false);
   const locationSub = useRef<Location.LocationSubscription | null>(null);
   const sessionIdRef = useRef<number | null>(null);
-  const listenerRemover = useRef<() => void>();
+  const listenerRemover = useRef<(() => void) | undefined>(undefined);
 
 
   const startSharing = async () => {
@@ -25,7 +25,19 @@ export default function EmergencyScreen() {
       return;
     }
 
+    // Get initial location for emergency alert
+    const initialLoc = await Location.getCurrentPositionAsync({
+      accuracy: Location.Accuracy.Highest,
+    });
+
     sendSocket({ type: "start_session" });
+
+    // Send emergency alert to trigger WhatsApp notification to all trusted contacts
+    sendSocket({
+      type: "emergency_alert",
+      lat: initialLoc.coords.latitude,
+      lng: initialLoc.coords.longitude,
+    });
 
     // listen for the server replying with session id
     listenerRemover.current = addSocketListener?.((msg) => {
@@ -86,7 +98,6 @@ export default function EmergencyScreen() {
     sessionIdRef.current = null;
     setSessionActive(false);
   };
->>>>>>> 986889087e5bc63b1a97d288dad034498cd96efd
 
 
   const handlePress = async () => {
