@@ -1,4 +1,3 @@
-import { getToken } from "@/api/api";
 import { Audio } from "expo-av";
 import { router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
@@ -12,19 +11,31 @@ import {
   Vibration,
   View,
 } from "react-native";
+import { getToken } from "../../api/api";
 
 const API_URL = process.env.EXPO_PUBLIC_IP_ADDRESS;
+
+// Pause between segments (ms) — simulates user responding
+const RESPONSE_PAUSE_MS = 3500;
 
 type CallState = "ringing" | "active" | "ended";
 
 export default function FakeCallScreen() {
   const [callState, setCallState] = useState<CallState>("ringing");
   const [elapsed, setElapsed] = useState(0);
-  const callerName = "Josh";
+  const [isPlaying, setIsPlaying] = useState(false);
+  const callerName = "Mom";
+
   const soundRef = useRef<Audio.Sound | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pauseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const segmentRef = useRef(0);
+  const convIndexRef = useRef(-1);
+  const totalSegmentsRef = useRef(0);
+  const activeRef = useRef(false); // tracks if call is still active
+
   const pulseAnim = useRef(new Animated.Value(1)).current;
-  const pulseAnim2 = useRef(new Animated.Value(1)).current;
+  const pulse2Anim = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     startPulse();
@@ -52,23 +63,37 @@ export default function FakeCallScreen() {
       ).start();
     };
     loop(pulseAnim, 0);
-    loop(pulseAnim2, 400);
+    loop(pulse2Anim, 400);
   };
 
   const stopAll = () => {
     Vibration.cancel();
+    activeRef.current = false;
     if (timerRef.current) clearInterval(timerRef.current);
+    if (pauseTimerRef.current) clearTimeout(pauseTimerRef.current);
     if (soundRef.current) {
       soundRef.current.stopAsync();
       soundRef.current.unloadAsync();
+      soundRef.current = null;
     }
+  };
+
+  const resetCallState = () => {
+    segmentRef.current = 0;
+    convIndexRef.current = -1;
+    totalSegmentsRef.current = 0;
+    setElapsed(0);
+    setIsPlaying(false);
   };
 
   const handleAnswer = async () => {
     Vibration.cancel();
+    activeRef.current = true;
     setCallState("active");
-    timerRef.current = setInterval(() => setElapsed((e) => e + 1), 1000);
-    await playAI();
+    timerRef.current = setInterval(() => {
+      setElapsed((prev) => prev + 1);
+    }, 1000);
+    await playSegment(0, -1);
   };
 
   const handleDecline = () => {
@@ -79,34 +104,55 @@ export default function FakeCallScreen() {
   const handleEndCall = () => {
     stopAll();
     setCallState("ended");
-    setTimeout(() => router.back(), 800);
   };
 
-  const playAI = async () => {
+  const handleCallAgain = () => {
+    resetCallState();
+    startPulse();
+    Vibration.vibrate([0, 400, 200, 400, 1000], true);
+    setCallState("ringing");
+  };
+
+  const playSegment = async (segment: number, convIndex: number) => {
+    if (!activeRef.current) return;
+
     try {
       const token = await getToken();
-      console.log("Calling backend for audio..."); // test
+      setIsPlaying(true);
 
-      const response = await fetch(`${API_URL}/fake-call/audio`, {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${token}`,
+      const response = await fetch(
+        `${API_URL}/fake-call/audio?segment=${segment}&conversation=${convIndex}`,
+        {
+          method: "POST",
+          headers: { Authorization: `Bearer ${token}` },
         },
-      });
+      );
 
-      console.log("Response status:", response.status); // test
-
-      if (!response.ok) {
-        const err = await response.json();
-        console.error("Fake call error:", err.detail);
+      // 404 means no more segments — conversation is done
+      if (response.status === 404) {
+        setIsPlaying(false);
         return;
       }
 
-      console.log("Got audio response, converting..."); //test
-      const arrayBuffer = await response.arrayBuffer();
-      console.log("ArrayBuffer size:", arrayBuffer.byteLength);
+      if (!response.ok) {
+        console.error("Fake call error:", response.status);
+        setIsPlaying(false);
+        return;
+      }
 
-      // Use Uint8Array and chunk the base64 conversion to avoid btoa limits
+      // Read conversation metadata from response headers
+      const returnedConvIndex = parseInt(
+        response.headers.get("X-Conversation-Index") || String(convIndex),
+      );
+      const totalSegments = parseInt(
+        response.headers.get("X-Total-Segments") || "0",
+      );
+
+      convIndexRef.current = returnedConvIndex;
+      totalSegmentsRef.current = totalSegments;
+
+      // Convert audio to base64 URI
+      const arrayBuffer = await response.arrayBuffer();
       const uint8Array = new Uint8Array(arrayBuffer);
       const chunkSize = 8192;
       let binary = "";
@@ -117,8 +163,6 @@ export default function FakeCallScreen() {
       const base64 = btoa(binary);
       const uri = `data:audio/mpeg;base64,${base64}`;
 
-      console.log("Base64 length:", base64.length);
-
       await Audio.setAudioModeAsync({
         allowsRecordingIOS: false,
         playsInSilentModeIOS: true,
@@ -126,14 +170,34 @@ export default function FakeCallScreen() {
         playThroughEarpieceAndroid: false,
       });
 
-      console.log("Loading sound...");
+      // Unload previous sound
+      if (soundRef.current) {
+        await soundRef.current.unloadAsync();
+        soundRef.current = null;
+      }
+
       const { sound } = await Audio.Sound.createAsync({ uri });
       soundRef.current = sound;
-      console.log("Playing sound...");
+
+      // When this segment finishes, wait then play next
+      sound.setOnPlaybackStatusUpdate((status) => {
+        if (!status.isLoaded) return;
+        if (status.didJustFinish) {
+          setIsPlaying(false);
+          const nextSegment = segment + 1;
+          if (nextSegment < totalSegments && activeRef.current) {
+            // Pause to simulate the user responding
+            pauseTimerRef.current = setTimeout(() => {
+              playSegment(nextSegment, returnedConvIndex);
+            }, RESPONSE_PAUSE_MS);
+          }
+        }
+      });
+
       await sound.playAsync();
-      console.log("Sound playing!");
-    } catch (err) {
-      console.error("Error playing audio:", err);
+    } catch (e) {
+      console.error("playSegment error:", e);
+      setIsPlaying(false);
     }
   };
 
@@ -169,17 +233,23 @@ export default function FakeCallScreen() {
             <Animated.View
               style={[
                 styles.pulse,
-                { transform: [{ scale: pulseAnim2 }], opacity: 0.12 },
+                { transform: [{ scale: pulse2Anim }], opacity: 0.12 },
               ]}
             />
             <View style={styles.avatar}>
               <Text style={styles.avatarText}>{callerName[0]}</Text>
             </View>
           </View>
+
+          {callState === "active" && (
+            <Text style={styles.statusIndicator}>
+              {isPlaying ? "● Speaking..." : "● Listening..."}
+            </Text>
+          )}
         </View>
 
         <View style={styles.buttonSection}>
-          {callState === "ringing" ? (
+          {callState === "ringing" && (
             <View style={styles.ringButtons}>
               <View style={styles.btnWrapper}>
                 <TouchableOpacity
@@ -200,7 +270,9 @@ export default function FakeCallScreen() {
                 <Text style={styles.btnLabel}>Answer</Text>
               </View>
             </View>
-          ) : callState === "active" ? (
+          )}
+
+          {callState === "active" && (
             <View style={styles.activeButtons}>
               <TouchableOpacity
                 style={[styles.circleBtn, styles.declineBtn]}
@@ -210,7 +282,25 @@ export default function FakeCallScreen() {
               </TouchableOpacity>
               <Text style={styles.btnLabel}>End Call</Text>
             </View>
-          ) : null}
+          )}
+
+          {callState === "ended" && (
+            <View style={styles.endedButtons}>
+              <TouchableOpacity
+                style={[styles.circleBtn, styles.answerBtn]}
+                onPress={handleCallAgain}
+              >
+                <Text style={styles.btnIcon}>📞</Text>
+              </TouchableOpacity>
+              <Text style={styles.btnLabel}>Call Again</Text>
+              <TouchableOpacity
+                style={styles.backButton}
+                onPress={() => router.back()}
+              >
+                <Text style={styles.backButtonText}>Back</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       </View>
     </SafeAreaView>
@@ -264,6 +354,12 @@ const styles = StyleSheet.create({
     borderColor: "#22c55e",
   },
   avatarText: { color: "#fff", fontSize: 36, fontWeight: "700" },
+  statusIndicator: {
+    color: "#22c55e",
+    fontSize: 13,
+    marginTop: 16,
+    letterSpacing: 1,
+  },
   buttonSection: { alignItems: "center" },
   ringButtons: {
     flexDirection: "row",
@@ -271,6 +367,7 @@ const styles = StyleSheet.create({
     width: "100%",
   },
   activeButtons: { alignItems: "center", gap: 12 },
+  endedButtons: { alignItems: "center", gap: 16 },
   btnWrapper: { alignItems: "center", gap: 10 },
   circleBtn: {
     width: 72,
@@ -283,4 +380,13 @@ const styles = StyleSheet.create({
   answerBtn: { backgroundColor: "#22c55e" },
   btnIcon: { fontSize: 26 },
   btnLabel: { color: "#94a3b8", fontSize: 13 },
+  backButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 28,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: "#2d2d3e",
+    marginTop: 4,
+  },
+  backButtonText: { color: "#94a3b8", fontSize: 14 },
 });
