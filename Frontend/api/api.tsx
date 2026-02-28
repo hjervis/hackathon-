@@ -4,7 +4,7 @@ const API_URL = process.env.EXPO_PUBLIC_IP_ADDRESS;
 
 // Helper to get the token
 export async function getToken() {
-  return await SecureStore.getItem('token');
+  return await SecureStore.getItem("token");
 }
 
 // Login function
@@ -15,10 +15,9 @@ export async function login(email: string, password: string) {
     body: JSON.stringify({ email, password }),
   });
   const data = await res.json();
-  if (!res.ok) throw new Error(data.detail || 'Login failed');
-  return data; 
+  if (!res.ok) throw new Error(data.detail || "Login failed");
+  return data;
 }
-
 
 // Register function
 export async function register(
@@ -43,7 +42,23 @@ export async function fetchContacts() {
     headers: { Authorization: `Bearer ${token}` },
   });
   const data = await res.json();
-  if (!res.ok) throw new Error(data.detail || 'Failed to fetch contacts');
+  if (!res.ok) throw new Error(data.detail || "Failed to fetch contacts");
+  return data;
+}
+
+// Add new contacts
+export async function addContact(contact_name: string, contact_phone: string) {
+  const token = await getToken();
+  const res = await fetch(`${API_URL}/contacts`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${token}`,
+    },
+    body: JSON.stringify({ contact_name, contact_phone }),
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.detail || "Failed to add new contact");
   return data;
 }
 
