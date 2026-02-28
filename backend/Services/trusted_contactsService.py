@@ -1,6 +1,6 @@
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
-from Models.trusted_contacts import TrustedContact
+from Models.trusted_contacts import TrustedContacts
 from Models.user import User
 from Schemas.trusted_contactSchema import TrustedContactCreate
 
@@ -15,15 +15,15 @@ def create_contact(db: Session, user_id: int, contact_data: TrustedContactCreate
         raise HTTPException(status_code=400, detail="Must provide at least a phone number or email")
 
     # Check if contact already exists for this user
-    existing = db.query(TrustedContact).filter(
-        TrustedContact.user_id == user_id,
-        TrustedContact.contact_phone == contact_data.contact_phone
+    existing = db.query(TrustedContacts).filter(
+        TrustedContacts.user_id == user_id,
+        TrustedContacts.contact_phone == contact_data.contact_phone
     ).first()
     if existing:
         raise HTTPException(status_code=400, detail="Contact already exists")
 
     # Create the contact
-    new_contact = TrustedContact(**contact_data.model_dump(), user_id=user_id)
+    new_contact = TrustedContacts(**contact_data.model_dump(), user_id=user_id)
     db.add(new_contact)
     db.commit()
     db.refresh(new_contact)
@@ -35,13 +35,13 @@ def get_contacts(db: Session, user_id: int):
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    return db.query(TrustedContact).filter(TrustedContact.user_id == user_id).all()
+    return db.query(TrustedContacts).filter(TrustedContacts.user_id == user_id).all()
 
 
 def delete_contact(db: Session, user_id: int, contact_id: int):
-    contact = db.query(TrustedContact).filter(
-        TrustedContact.id == contact_id,
-        TrustedContact.user_id == user_id
+    contact = db.query(TrustedContacts).filter(
+        TrustedContacts.id == contact_id,
+        TrustedContacts.user_id == user_id
     ).first()
     if not contact:
         raise HTTPException(status_code=404, detail="Contact not found")

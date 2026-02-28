@@ -1,25 +1,32 @@
 from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy.orm import Session
-from Schemas.userSchema import UserCreate, UserResponse, UserLogin
+from Schemas.userSchema import UserCreate, UserLogin
 from Database.database import get_db
-from Services.user_service import create_user
-from Services.user_service import authenticate_user  # service that talks to DB
-from Services.auth_service import create_access_token, verify_password
+from Services.user_service import create_user, authenticate_user
+from Services.auth_service import create_access_token
 
 router = APIRouter(
     prefix="/auth",
     tags=["Authentication"]
 )
 
-@router.post("/register", response_model=UserResponse)
+@router.post("/register")
 def register_user(user: UserCreate, db: Session = Depends(get_db)):
     new_user = create_user(user, db)
+
+    # Create token immediately — same shape as /login
+    # so auth-context.tsx handles both identically
+    token = create_access_token({"sub": new_user.email, "id": new_user.id})
+
     return {
-        "id": new_user.id,
-        "username": new_user.username,
-        "email": new_user.email,
-        "phone": new_user.phone,
-        "created_at": new_user.created_at,
+        "user": {
+            "id": new_user.id,
+            "username": new_user.username,
+            "email": new_user.email,
+            "phone": new_user.phone,
+            "created_at": new_user.created_at,
+        },
+        "token": token
     }
 
 @router.post("/login")
@@ -28,7 +35,6 @@ def login_user(credentials: UserLogin, db: Session = Depends(get_db)):
     if not user:
         raise HTTPException(status_code=400, detail="Invalid email or password")
 
-    # Create JWT token
     token = create_access_token({"sub": user.email, "id": user.id})
 
     return {
