@@ -1,6 +1,6 @@
 import * as SecureStore from "expo-secure-store";
 
-const API_URL = process.env.EXPO_PUBLIC_IP_ADDRESS; 
+const API_URL = process.env.EXPO_PUBLIC_IP_ADDRESS;
 
 // Helper to get the token
 export async function getToken() {
