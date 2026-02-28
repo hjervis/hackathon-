@@ -319,7 +319,7 @@
         let firstLocation = true;
 
         // connect to websocket as a tracker for this user
-        const serverUrl = `ws://${window.location.hostname}:8000/ws/tracker-${userId}`;
+        const serverUrl = `wss://hackathon-production-3b00.up.railway.app/ws/tracker-${userId}`;
         const ws = new WebSocket(serverUrl);
 
         ws.onopen = () => {
