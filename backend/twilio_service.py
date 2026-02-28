@@ -23,11 +23,11 @@ def send_emergency_sms(to_number: str, user_name: str, lat: float, lng: float):
                 f"{user_name} has triggered an emergency. \n"
                 f"Current location: {maps_link}\n"
             ),
-            from_=TWILIO_PHONE_NUMBER,
-            to=to_number
+            from_=f"whatsapp:{TWILIO_PHONE_NUMBER}",
+            to=f"whatsapp:{to_number}"
         )
-        print(f"SMS sent successfully! SID: {message.sid}")
+        print(f"WhatsApp message sent successfully! SID: {message.sid}")
         return message.sid
     except Exception as e:
-        print(f"Error sending SMS: {e}")
+        print(f"Error sending WhatsApp Message: {e}")
         return None
