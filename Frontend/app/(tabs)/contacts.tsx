@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
     FlatList,
     KeyboardAvoidingView,
@@ -14,14 +14,20 @@ import {
 // A single contact
 type Contact = {
   id: string;
-  name: string;
-  phone: string;
+  contact_name: string;
+  contact_phone: string;
 };
 
 export default function ContactsScreen() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
+  const [loadingContacts, setLoadingContacts] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Loading contacts on screen open
+  useEffect;
 
   const addContact = () => {
     if (!name.trim() || !phone.trim()) return;
