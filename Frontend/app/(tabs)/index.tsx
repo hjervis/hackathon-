@@ -1,3 +1,4 @@
+import { router } from "expo-router";
 import { useState } from "react";
 import { SafeAreaView, StyleSheet, Text, TouchableOpacity } from "react-native";
 
@@ -25,6 +26,12 @@ export default function EmergencyScreen() {
         <Text style={styles.sosSubText}>
           {sessionActive ? "Tap to end" : "Tap for help"}
         </Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        onPress={() => router.push("../../app/(tabs)/fake-call")}
+      >
+        <Text>📞 Fake Call</Text>
       </TouchableOpacity>
 
       <Text style={styles.statusText}>
