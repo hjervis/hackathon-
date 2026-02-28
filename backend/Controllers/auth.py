@@ -12,6 +12,7 @@ router = APIRouter(
 
 @router.post("/register")
 def register_user(user: UserCreate, db: Session = Depends(get_db)):
+    # pydantic will validate email/password thanks to our schema
     new_user = create_user(user, db)
 
     # Create token immediately — same shape as /login
@@ -33,7 +34,8 @@ def register_user(user: UserCreate, db: Session = Depends(get_db)):
 def login_user(credentials: UserLogin, db: Session = Depends(get_db)):
     user = authenticate_user(credentials.email, credentials.password, db)
     if not user:
-        raise HTTPException(status_code=400, detail="Invalid email or password")
+        # use 401 so clients know authentication failed rather than bad request
+        raise HTTPException(status_code=401, detail="Invalid email or password")
 
     token = create_access_token({"sub": user.email, "id": user.id})
 

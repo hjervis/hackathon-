@@ -1,27 +1,38 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, ActivityIndicator } from 'react-native';
 import { Link } from 'expo-router';
 import { useAuth } from '@/components/auth/auth-context';
 
 export default function SignUp() {
-  const { register, error } = useAuth();
+  const { register, error, authenticating } = useAuth();
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [submitting, setSubmitting] = useState(false);
+  const [phone, setPhone] = useState('');
+  const [localError, setLocalError] = useState<string | null>(null);
 
   const handleRegister = async () => {
-    setSubmitting(true);
-    await register(username, email, password);
-    setSubmitting(false);
+    await register(username.trim(), email.trim(), password, phone.trim());
   };
+
+  // propagate errors to local state so we can auto‑clear them
+  useEffect(() => {
+    if (error) setLocalError(error);
+  }, [error]);
+
+  useEffect(() => {
+    if (localError) {
+      const id = setTimeout(() => setLocalError(null), 4000);
+      return () => clearTimeout(id);
+    }
+  }, [localError]);
 
   return (
     <View style={styles.container}>
       <Text style={styles.title}>Create account</Text>
       <Text style={styles.subtitle}>Start staying safe today</Text>
 
-      {error && <Text style={styles.error}>{error}</Text>}
+      {(localError || error) && <Text style={styles.error}>{localError || error}</Text>}
 
       <TextInput
         style={styles.input}
@@ -48,13 +59,21 @@ export default function SignUp() {
         onChangeText={setPassword}
         secureTextEntry
       />
+      <TextInput
+        style={styles.input}
+        placeholder="Phone (Optional - required for SMS alerts)"
+        placeholderTextColor="#888"
+        value={phone}
+        onChangeText={setPhone}
+        keyboardType="phone-pad"
+      />
 
       <TouchableOpacity
         style={[styles.button, (!username || !email || !password) && styles.buttonDisabled]}
         onPress={handleRegister}
-        disabled={!username || !email || !password || submitting}
+        disabled={!username || !email || !password || authenticating}
       >
-        {submitting ? (
+        {authenticating ? (
           <ActivityIndicator color="#fff" />
         ) : (
           <Text style={styles.buttonText}>Create Account</Text>

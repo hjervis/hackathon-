@@ -6,23 +6,27 @@ import { Link } from "expo-router";
 import { useAuth } from "@/components/auth/auth-context";
 
 export default function SignIn() {
-  const { login, error, loading, token } = useAuth();
+  const { login, error, loading, authenticating } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [submitting, setSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [localError, setLocalError] = useState<string | null>(null);
 
-  // If user is already logged in, redirect automatically
+  // clear errors when fields change
   useEffect(() => {
-    if (!loading && token) {
-      // user is already logged in
-      // router.replace('/(tabs)') handled in AuthProvider
+    if (error) setLocalError(error);
+  }, [error]);
+
+  useEffect(() => {
+    if (localError) {
+      const id = setTimeout(() => setLocalError(null), 4000);
+      return () => clearTimeout(id);
     }
-  }, [loading, token]);
+  }, [localError]);
 
   const handleLogin = async () => {
-    setSubmitting(true);
-    await login(email, password);
-    setSubmitting(false);
+    // login returns success flag now
+    await login(email.trim(), password);
   };
 
   if (loading) {
@@ -38,7 +42,7 @@ export default function SignIn() {
       <Text style={styles.title}>Welcome back</Text>
       <Text style={styles.subtitle}>Sign in to your account</Text>
 
-      {error && <Text style={styles.error}>{error}</Text>}
+      {(localError || error) && <Text style={styles.error}>{localError || error}</Text>}
 
       <TextInput
         style={styles.input}
@@ -49,25 +53,33 @@ export default function SignIn() {
         autoCapitalize="none"
         keyboardType="email-address"
       />
-      <TextInput
-        style={styles.input}
-        placeholder="Password"
-        placeholderTextColor="#888"
-        value={password}
-        onChangeText={setPassword}
-        secureTextEntry
-      />
+      <View style={{ position: "relative" }}>
+        <TextInput
+          style={styles.input}
+          placeholder="Password"
+          placeholderTextColor="#888"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry={!showPassword}
+        />
+        <TouchableOpacity
+          style={styles.showHide}
+          onPress={() => setShowPassword((v) => !v)}
+        >
+          <Text style={styles.showHideText}>{showPassword ? "Hide" : "Show"}</Text>
+        </TouchableOpacity>
+      </View>
 
       <TouchableOpacity
         style={[styles.button, (!email || !password) && styles.buttonDisabled]}
         onPress={handleLogin}
-        disabled={!email || !password || submitting}
+        disabled={!email || !password || authenticating}
       >
-        {submitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Sign In</Text>}
+        {authenticating ? <ActivityIndicator color="#fff" /> : <Text style={styles.buttonText}>Sign In</Text>}
       </TouchableOpacity>
 
       <View style={styles.footer}>
-        <Text style={styles.footerText}>Don't have an account? </Text>
+        <Text style={styles.footerText}>Don&apos;t have an account? </Text>
         <Link href="/(auth)/sign-up">
           <Text style={styles.link}>Sign up</Text>
         </Link>
@@ -78,6 +90,15 @@ export default function SignIn() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, justifyContent: "center", padding: 24, backgroundColor: "#fff" },
+  showHide: {
+    position: "absolute",
+    right: 16,
+    top: 14,
+  },
+  showHideText: {
+    color: "#666",
+    fontSize: 14,
+  },
   title: { fontSize: 28, fontWeight: "700", color: "#111", marginBottom: 6 },
   subtitle: { fontSize: 16, color: "#666", marginBottom: 32 },
   error: { color: "#e53e3e", marginBottom: 16, fontSize: 14 },

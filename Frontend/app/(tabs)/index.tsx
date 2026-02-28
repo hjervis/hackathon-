@@ -1,15 +1,96 @@
 import { router } from "expo-router";
-import { useState } from "react";
-import { SafeAreaView, StyleSheet, Text, TouchableOpacity } from "react-native";
+import { useState, useRef } from "react";
+import { SafeAreaView, StyleSheet, Text, TouchableOpacity, Alert } from "react-native";
+import * as Location from "expo-location";
+import { useAuth } from "@/components/auth/auth-context";
 
 export default function EmergencyScreen() {
+  const { token, user, sendSocket, addSocketListener } = useAuth();
   const [sessionActive, setSessionActive] = useState(false);
+  const locationSub = useRef<Location.LocationSubscription | null>(null);
+  const sessionIdRef = useRef<number | null>(null);
+  const listenerRemover = useRef<() => void>();
+
+
+  const startSharing = async () => {
+    console.log("[startSharing] Called. user:", !!user, "sendSocket:", !!sendSocket);
+    if (!user || !sendSocket) {
+      console.warn("[startSharing] Missing user or sendSocket, returning");
+      return;
+    }
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert("Permission required", "Location permission is needed to share your position");
+      return;
+    }
+
+    sendSocket({ type: "start_session" });
+
+    // listen for the server replying with session id
+    listenerRemover.current = addSocketListener?.((msg) => {
+      if (msg.type === "session_started") {
+        sessionIdRef.current = msg.session_id;
+      }
+    });
+
+    console.log("[Location] Starting location polling...");
+    let isActive = true;
+    const pollLocation = async () => {
+      while (isActive) {
+        try {
+          const loc = await Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.Highest,
+          });
+          console.log("[Location] Update received at:", new Date().toISOString(), "lat:", Math.round(loc.coords.latitude * 100) / 100);
+          sendSocket({
+            type: "location_update",
+            lat: loc.coords.latitude,
+            lng: loc.coords.longitude,
+            accuracy: loc.coords.accuracy,
+          });
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        } catch (error) {
+          console.error("[Location] Error getting position:", error);
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      }
+    };
+    
+    locationSub.current = {
+      remove: () => {
+        isActive = false;
+      }
+    } as any;
+    
+    pollLocation();
+    console.log("[Location] Location polling started");
+
+    setSessionActive(true);
+  };
+
+  const stopSharing = () => {
+    listenerRemover.current?.();
+    listenerRemover.current = undefined;
+    if (sendSocket) {
+      sendSocket({ type: "end_session", session_id: sessionIdRef.current });
+    }
+    if (locationSub.current) {
+      try {
+        locationSub.current.remove?.();
+      } catch (e) {
+        console.warn("Error removing location subscription:", e);
+      }
+      locationSub.current = null;
+    }
+    sessionIdRef.current = null;
+    setSessionActive(false);
+  };
 
   const handlePress = () => {
     if (sessionActive) {
-      setSessionActive(false);
+      stopSharing();
     } else {
-      setSessionActive(true);
+      startSharing();
     }
   };
 
@@ -22,7 +103,7 @@ export default function EmergencyScreen() {
         onPress={handlePress}
         activeOpacity={0.85}
       >
-        <Text style={styles.sosText}>{sessionActive ? "STOP" : "SOS"}</Text>
+        <Text style={styles.sosText}>SOS</Text>
         <Text style={styles.sosSubText}>
           {sessionActive ? "Tap to end" : "Tap for help"}
         </Text>

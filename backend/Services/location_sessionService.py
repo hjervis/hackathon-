@@ -9,13 +9,16 @@ def createLocationsession(db: Session, user_id: int):
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
+    # End any existing active session first
     active_session = db.query(LocationSession).filter(
         LocationSession.user_id == user_id,
         LocationSession.is_active == True
     ).first()
 
     if active_session:
-        raise HTTPException(status_code=400, detail="User already has an active session")
+        active_session.is_active = False
+        active_session.ended_at = datetime.now(timezone.utc)
+        db.commit()
     
     new_session = LocationSession(user_id=user_id)
     db.add(new_session)
