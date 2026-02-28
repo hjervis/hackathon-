@@ -5,11 +5,19 @@ from datetime import datetime
 from pydantic import BaseModel
 from typing import Optional
 
+from pydantic import validator, EmailStr
+
 class UserCreate(BaseModel):
     username: str
-    email: Optional[str] = None
+    email: Optional[EmailStr] = None
     password: str
     phone: Optional[str] = None
+
+    @validator('password')
+    def password_min_length(cls, v):
+        if len(v) < 6:
+            raise ValueError('password must be at least 6 characters')
+        return v
 
 class UserResponse(BaseModel):
     id: int
@@ -22,5 +30,11 @@ class UserResponse(BaseModel):
         orm_mode = True
 
 class UserLogin(BaseModel):
-    email: str
+    email: EmailStr
     password: str
+
+    @validator('password')
+    def password_nonempty(cls, v):
+        if not v:
+            raise ValueError('password cannot be empty')
+        return v

@@ -1,77 +1,99 @@
 import { router } from "expo-router";
 import { useState, useEffect, useRef } from "react";
-import { SafeAreaView, StyleSheet, Text, TouchableOpacity } from "react-native";
+import { SafeAreaView, StyleSheet, Text, TouchableOpacity, Alert } from "react-native";
 import * as Location from "expo-location";
+import { useAuth } from "@/components/auth/auth-context";
 
-const SERVER_URL = process.env.EXPO_PUBLIC_IP_ADDRESS?.replace("http", "ws");
 
 export default function EmergencyScreen() {
+  const { token, user, sendSocket, addSocketListener } = useAuth();
   const [sessionActive, setSessionActive] = useState(false);
-  const wsRef = useRef<WebSocket | null>(null);
-  const locationRef = useRef<Location.LocationSubscription | null>(null);
+  const locationSub = useRef<Location.LocationSubscription | null>(null);
+  const sessionIdRef = useRef<number | null>(null);
+  const listenerRemover = useRef<() => void>();
 
-  // connect to websocket when component loads
-  useEffect(() => {
-    // TODO: replace "test-user" with the actual logged in user's name from your auth system
-    const ws = new WebSocket(`${SERVER_URL}/ws/test-user`);
-    wsRef.current = ws;
 
-    ws.onopen = () => console.log("WebSocket connected!");
-    ws.onclose = () => console.log("WebSocket disconnected!");
-    ws.onerror = (e) => console.log("WebSocket error:", e);
+  const startSharing = async () => {
+    console.log("[startSharing] Called. user:", !!user, "sendSocket:", !!sendSocket);
+    if (!user || !sendSocket) {
+      console.warn("[startSharing] Missing user or sendSocket, returning");
+      return;
+    }
+    const { status } = await Location.requestForegroundPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert("Permission required", "Location permission is needed to share your position");
+      return;
+    }
 
-    // cleanup websocket when component unmounts
-    return () => ws.close();
-  }, []);
+    sendSocket({ type: "start_session" });
+
+    // listen for the server replying with session id
+    listenerRemover.current = addSocketListener?.((msg) => {
+      if (msg.type === "session_started") {
+        sessionIdRef.current = msg.session_id;
+      }
+    });
+
+    console.log("[Location] Starting location polling...");
+    let isActive = true;
+    const pollLocation = async () => {
+      while (isActive) {
+        try {
+          const loc = await Location.getCurrentPositionAsync({
+            accuracy: Location.Accuracy.Highest,
+          });
+          console.log("[Location] Update received at:", new Date().toISOString(), "lat:", Math.round(loc.coords.latitude * 100) / 100);
+          sendSocket({
+            type: "location_update",
+            lat: loc.coords.latitude,
+            lng: loc.coords.longitude,
+            accuracy: loc.coords.accuracy,
+          });
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        } catch (error) {
+          console.error("[Location] Error getting position:", error);
+          await new Promise(resolve => setTimeout(resolve, 1000));
+        }
+      }
+    };
+    
+    locationSub.current = {
+      remove: () => {
+        isActive = false;
+      }
+    } as any;
+    
+    pollLocation();
+    console.log("[Location] Location polling started");
+
+    setSessionActive(true);
+  };
+
+  const stopSharing = () => {
+    listenerRemover.current?.();
+    listenerRemover.current = undefined;
+    if (sendSocket) {
+      sendSocket({ type: "end_session", session_id: sessionIdRef.current });
+    }
+    if (locationSub.current) {
+      try {
+        locationSub.current.remove?.();
+      } catch (e) {
+        console.warn("Error removing location subscription:", e);
+      }
+      locationSub.current = null;
+    }
+    sessionIdRef.current = null;
+    setSessionActive(false);
+  };
+>>>>>>> 986889087e5bc63b1a97d288dad034498cd96efd
+
 
   const handlePress = async () => {
     if (sessionActive) {
-      // stop the session — stop sending location updates
-      setSessionActive(false);
-      if (locationRef.current) {
-        locationRef.current.remove();
-        locationRef.current = null;
-      }
+      stopSharing();
     } else {
-      // start the session
-      setSessionActive(true);
-
-      // request location permission
-      const { status } = await Location.requestForegroundPermissionsAsync();
-      if (status !== "granted") {
-        console.log("Location permission denied");
-        return;
-      }
-
-      // get current location to send with the emergency alert
-      const location = await Location.getCurrentPositionAsync({});
-      const { latitude, longitude } = location.coords;
-
-      // send emergency alert with current location
-      // TODO: replace emergency_contact and user_name with real values from your auth/database
-      if (wsRef.current?.readyState === WebSocket.OPEN) {
-        wsRef.current.send(JSON.stringify({
-          type: "emergency_alert",
-          lat: latitude,
-          lng: longitude,
-          user_name: "Test User",
-          emergency_contact: "+19495620239"
-        }));
-      }
-
-      // start sending live location updates every 5 seconds
-      locationRef.current = await Location.watchPositionAsync(
-        { accuracy: Location.Accuracy.High, timeInterval: 5000, distanceInterval: 5 },
-        (loc) => {
-          if (wsRef.current?.readyState === WebSocket.OPEN) {
-            wsRef.current.send(JSON.stringify({
-              type: "location_update",
-              lat: loc.coords.latitude,
-              lng: loc.coords.longitude,
-            }));
-          }
-        }
-      );
+      startSharing();
     }
   };
 
@@ -83,7 +105,7 @@ export default function EmergencyScreen() {
         onPress={handlePress}
         activeOpacity={0.85}
       >
-        <Text style={styles.sosText}>{sessionActive ? "STOP" : "SOS"}</Text>
+        <Text style={styles.sosText}>SOS</Text>
         <Text style={styles.sosSubText}>
           {sessionActive ? "Tap to end" : "Tap for help"}
         </Text>

@@ -12,12 +12,14 @@ import {
   View,
 } from "react-native";
 import { addContact, deleteContact, fetchContacts } from "../../api/api";
+import { useAuth } from "@/components/auth/auth-context";
 
 // A single contact
 type Contact = {
   id: string;
   contact_name: string;
   contact_phone: string;
+  contact_user_id?: number; // may be null if contact not yet a user
 };
 
 export default function ContactsScreen() {
@@ -27,6 +29,20 @@ export default function ContactsScreen() {
   const [loadingContacts, setLoadingContacts] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [sharing, setSharing] = useState<Record<number, boolean>>({}); // map user_id -> isSharing
+  const { addSocketListener } = useAuth();
+
+  // listen for socket messages so we can update UI when a contact begins/stops sharing
+  useEffect(() => {
+    const remove = addSocketListener?.((msg) => {
+      if (msg.type === "contact_started") {
+        setSharing((prev) => ({ ...prev, [msg.user_id]: true }));
+      } else if (msg.type === "contact_ended") {
+        setSharing((prev) => ({ ...prev, [msg.user_id]: false }));
+      }
+    });
+    return () => remove?.();
+  }, [addSocketListener]);
 
   // Loading contacts on screen open
   useEffect(() => {
@@ -139,6 +155,9 @@ export default function ContactsScreen() {
                   <Text style={styles.contactName}>{item.contact_name}</Text>
                   <Text style={styles.contactPhone}>{item.contact_phone}</Text>
                 </View>
+                {item.contact_user_id != null && sharing[item.contact_user_id] && (
+                  <Text style={styles.sharingIndicator}>📍 sharing</Text>
+                )}
                 {/* CHANGED: calls handleRemoveContact instead of removeContact */}
                 <TouchableOpacity onPress={() => removeContact(item.id)}>
                   <Text style={styles.removeText}>✕</Text>
@@ -182,6 +201,11 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginTop: 20,
     fontSize: 14,
+  },
+  sharingIndicator: {
+    color: "#10b981",
+    fontSize: 12,
+    marginLeft: 8,
   },
   contactCard: {
     backgroundColor: "#1e1e2e",

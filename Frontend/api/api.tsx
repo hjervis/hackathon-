@@ -1,16 +1,17 @@
-// storage helper handles secure store on native platforms and localStorage on web
-import { getItem } from "../utils/storage";
+// generic storage wrapper handles web vs native platforms
+import * as storage from "../utils/storage";
 
 const API_URL = process.env.EXPO_PUBLIC_IP_ADDRESS;
 
 // Helper to get the token
 export async function getToken(): Promise<string | null> {
-  return await getItem("token");
+  return await storage.getItem("token");
+}
 }
 
 // Helper to get current user's id
 async function getUserId(): Promise<number> {
-  const userJson = await getItem("user");
+  const userJson = await storage.getItem("user");
   if (!userJson) throw new Error("Not logged in");
   const user = JSON.parse(userJson);
   return user.id;
@@ -23,8 +24,16 @@ export async function login(email: string, password: string) {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ email, password }),
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.detail || "Login failed");
+  let data: any = null;
+  try {
+    data = await res.json();
+  } catch (_) {
+    // ignore parse errors
+  }
+  if (!res.ok) {
+    const msg = data?.detail || data?.message || res.statusText || "Login failed";
+    throw new Error(msg);
+  }
   return data;
 }
 
@@ -33,14 +42,21 @@ export async function register(
   username: string,
   email: string,
   password: string,
+  phone?: string,
 ) {
   const res = await fetch(`${API_URL}/auth/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ username, email, password }),
+    body: JSON.stringify({ username, email, password, phone }),
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.detail || "Registration failed");
+  let data: any = null;
+  try {
+    data = await res.json();
+  } catch (_) {}
+  if (!res.ok) {
+    const msg = data?.detail || data?.message || res.statusText || "Registration failed";
+    throw new Error(msg);
+  }
   return data;
 }
 
