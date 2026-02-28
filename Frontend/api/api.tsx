@@ -4,7 +4,7 @@ import * as storage from "../utils/storage";
 const API_URL = process.env.EXPO_PUBLIC_IP_ADDRESS;
 
 // Helper to get the token
-export async function getToken() {
+export async function getToken(): Promise<string | null> {
   return await storage.getItem("token");
 }
 

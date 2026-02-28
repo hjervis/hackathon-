@@ -45,3 +45,4 @@ export async function isAvailable(): Promise<boolean> {
   if (isWeb) return false;
   return await SecureStore.isAvailableAsync();
 }
+
