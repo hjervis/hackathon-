@@ -17,26 +17,22 @@
             --border: #222222;
             --text: #f0f0f0;
             --text-dim: #666666;
-            --pulse: #FF2D2D;
         }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        html, body { height: 100%; width: 100%; }
 
         body {
             background: var(--bg);
             color: var(--text);
             font-family: 'DM Sans', sans-serif;
-            height: 100vh;
             display: flex;
             flex-direction: column;
+            height: 100vh;
             overflow: hidden;
         }
 
-        /* top status bar */
         header {
             background: var(--surface);
             border-bottom: 1px solid var(--border);
@@ -44,20 +40,14 @@
             display: flex;
             align-items: center;
             justify-content: space-between;
-            z-index: 1000;
             flex-shrink: 0;
+            z-index: 1000;
         }
 
-        .header-left {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-        }
+        .header-left { display: flex; align-items: center; gap: 12px; }
 
-        /* animated pulse dot */
         .pulse-dot {
-            width: 10px;
-            height: 10px;
+            width: 10px; height: 10px;
             background: var(--red);
             border-radius: 50%;
             position: relative;
@@ -96,19 +86,9 @@
             text-transform: uppercase;
         }
 
-        .status-live {
-            background: var(--red-dim);
-            color: var(--red);
-            border: 1px solid var(--red);
-        }
+        .status-live { background: var(--red-dim); color: var(--red); border: 1px solid var(--red); }
+        .status-waiting { background: #1a1a1a; color: var(--text-dim); border: 1px solid var(--border); }
 
-        .status-waiting {
-            background: #1a1a1a;
-            color: var(--text-dim);
-            border: 1px solid var(--border);
-        }
-
-        /* user info bar */
         .info-bar {
             background: var(--surface2);
             border-bottom: 1px solid var(--border);
@@ -119,11 +99,7 @@
             flex-shrink: 0;
         }
 
-        .info-item {
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-        }
+        .info-item { display: flex; flex-direction: column; gap: 2px; }
 
         .info-label {
             font-family: 'Space Mono', monospace;
@@ -133,37 +109,22 @@
             color: var(--text-dim);
         }
 
-        .info-value {
-            font-size: 13px;
-            font-weight: 600;
-            color: var(--text);
-        }
+        .info-value { font-size: 13px; font-weight: 600; color: var(--text); }
 
-        .info-divider {
-            width: 1px;
-            height: 28px;
-            background: var(--border);
-        }
+        .info-divider { width: 1px; height: 28px; background: var(--border); }
 
-        /* map takes remaining space */
-        #map {
-            flex: 1;
-            width: 100%;
-        }
+        /* map wrapper takes all remaining space */
+        .map-wrapper { flex: 1; position: relative; overflow: hidden; }
 
-        /* dark map tiles override */
-        .leaflet-tile {
-            filter: brightness(0.6) saturate(0.3) hue-rotate(180deg);
-        }
+        /* map fills the wrapper completely using absolute positioning */
+        #map { position: absolute; top: 0; left: 0; right: 0; bottom: 0; }
 
-        /* bottom alert banner */
         .alert-banner {
             background: var(--red);
             padding: 12px 20px;
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 10px;
             flex-shrink: 0;
         }
 
@@ -176,10 +137,8 @@
             color: white;
         }
 
-        /* custom marker */
         .emergency-marker {
-            width: 20px;
-            height: 20px;
+            width: 20px; height: 20px;
             background: var(--red);
             border-radius: 50%;
             border: 3px solid white;
@@ -192,11 +151,9 @@
             50% { box-shadow: 0 0 0 12px rgba(255, 45, 45, 0); }
         }
 
-        /* no location state */
         #waiting-overlay {
-            position: absolute;
-            inset: 0;
-            background: rgba(10,10,10,0.85);
+            position: absolute; inset: 0;
+            background: rgba(10, 10, 10, 0.85);
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -215,22 +172,18 @@
         }
 
         .waiting-spinner {
-            width: 32px;
-            height: 32px;
+            width: 32px; height: 32px;
             border: 2px solid var(--border);
             border-top-color: var(--red);
             border-radius: 50%;
             animation: spin 1s linear infinite;
         }
 
-        @keyframes spin {
-            to { transform: rotate(360deg); }
-        }
+        @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
 
-    <!-- top header -->
     <header>
         <div class="header-left">
             <div class="pulse-dot"></div>
@@ -239,11 +192,9 @@
         <span class="status-badge status-waiting" id="status-badge">Connecting...</span>
     </header>
 
-    <!-- user info bar -->
     <div class="info-bar">
         <div class="info-item">
             <span class="info-label">Tracking</span>
-            <!-- user id comes from the URL e.g. /track/hannah123 -->
             <span class="info-value" id="tracking-name">—</span>
         </div>
         <div class="info-divider"></div>
@@ -258,38 +209,32 @@
         </div>
     </div>
 
-    <!-- map -->
-    <div style="position: relative; flex: 1;">
+    <div class="map-wrapper">
         <div id="map"></div>
-        <!-- shown while waiting for first location -->
         <div id="waiting-overlay">
             <div class="waiting-spinner"></div>
             <span class="waiting-text">Waiting for location...</span>
         </div>
     </div>
 
-    <!-- bottom alert banner -->
     <div class="alert-banner">
         <span>🚨 Emergency Alert Active — Share this page with emergency services</span>
     </div>
 
     <script>
-        // get the user id from the URL e.g. /track/hannah123 → hannah123
+        // get the user id from the URL e.g. /track/user1 → user1
         const pathParts = window.location.pathname.split('/');
         const userId = pathParts[pathParts.length - 1];
-
-        // show the user id in the info bar
         document.getElementById('tracking-name').textContent = userId;
 
-        // initialize the map centered on the US by default
-        const map = L.map('map', { zoomControl: true }).setView([39.5, -98.35], 4);
+        // initialize map centered on Clemson campus
+        const map = L.map('map', { zoomControl: true }).setView([34.6834, -82.8374], 15);
 
-        // using openstreetmap tiles
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
             attribution: '© OpenStreetMap contributors'
         }).addTo(map);
 
-        // custom red marker icon
+        // custom red pulsing marker
         const emergencyIcon = L.divIcon({
             className: '',
             html: '<div class="emergency-marker"></div>',
@@ -300,54 +245,55 @@
         let marker = null;
         let firstLocation = true;
 
-        // connect to the websocket server
-        // the server address needs to match wherever your backend is running
+        // connect to websocket as a tracker for this user
         const serverUrl = `ws://${window.location.hostname}:8000/ws/tracker-${userId}`;
         const ws = new WebSocket(serverUrl);
 
         ws.onopen = () => {
-            // update status badge to show we're connected
+            console.log('WebSocket connected!');
             const badge = document.getElementById('status-badge');
             badge.textContent = 'Live';
             badge.className = 'status-badge status-live';
         };
 
         ws.onmessage = (event) => {
+            console.log('Message received:', event.data);
             const data = JSON.parse(event.data);
 
-            // only handle location updates for the user we're tracking
-            if (data.type === 'location_update' && data.id === userId) {
+            if (data.type === 'location_update') {
                 const { lat, lng } = data;
 
-                // hide the waiting overlay once we get first location
+                // hide waiting overlay on first location
                 if (firstLocation) {
                     document.getElementById('waiting-overlay').style.display = 'none';
                     firstLocation = false;
                 }
 
-                // update or create the marker on the map
+                // move existing marker or create new one
                 if (marker) {
                     marker.setLatLng([lat, lng]);
                 } else {
                     marker = L.marker([lat, lng], { icon: emergencyIcon }).addTo(map);
                 }
 
-                // zoom in on first location, then just pan smoothly
-                if (firstLocation === false && marker) {
-                    map.setView([lat, lng], 16, { animate: true });
-                }
+                // pan map to follow the marker
+                map.setView([lat, lng], 16, { animate: true });
 
-                // update the info bar
+                // update info bar
                 document.getElementById('last-update').textContent = new Date().toLocaleTimeString();
                 document.getElementById('coordinates').textContent = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
             }
         };
 
         ws.onclose = () => {
-            // update status if connection drops
+            console.log('WebSocket disconnected!');
             const badge = document.getElementById('status-badge');
             badge.textContent = 'Disconnected';
             badge.className = 'status-badge status-waiting';
+        };
+
+        ws.onerror = (error) => {
+            console.log('WebSocket error:', error);
         };
     </script>
 

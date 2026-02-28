@@ -44,6 +44,7 @@ async def websocket_endpoint(
                 for cid, ws in clients.items():
                     if cid!= client_id:
                         await ws.send_json({
+                            "type": "location_update",
                             "id": client_id,
                             "lat": data["lat"],
                             "lng": data["lng"],
