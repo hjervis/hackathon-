@@ -4,6 +4,7 @@ from Schemas.userSchema import UserCreate, UserResponse, UserLogin
 from Database.database import get_db
 from Services.user_service import create_user
 from Services.user_service import authenticate_user  # service that talks to DB
+from Services.auth_service import create_access_token, verify_password
 
 router = APIRouter(
     prefix="/auth",
@@ -26,9 +27,9 @@ def login_user(credentials: UserLogin, db: Session = Depends(get_db)):
     user = authenticate_user(credentials.email, credentials.password, db)
     if not user:
         raise HTTPException(status_code=400, detail="Invalid email or password")
-    
-    # Generate a fake token for now
-    token = "fake-token-for-now"
+
+    # Create JWT token
+    token = create_access_token({"sub": user.email, "id": user.id})
 
     return {
         "user": {
@@ -36,7 +37,7 @@ def login_user(credentials: UserLogin, db: Session = Depends(get_db)):
             "username": user.username,
             "email": user.email,
             "phone": user.phone,
-            "created_at": str(user.created_at),
+            "created_at": user.created_at,
         },
         "token": token
     }
