@@ -1,22 +1,26 @@
+from fastapi import HTTPException
 from Models.user import User
 from sqlalchemy.orm import Session
-from passlib.hash import bcrypt
+import bcrypt
 
 def create_user(user_data, db: Session):
-    # check if email already exists
+    # Check if email already exists
     existing_user = db.query(User).filter(User.email == user_data.email).first()
     if existing_user:
-        raise Exception("User with this email already exists")
+        raise HTTPException(status_code=400, detail="User with this email already exists")
 
-    # hash password
-    hashed_password = bcrypt.hash(user_data.password)
+    # Hash password correctly using bcrypt directly
+    hashed_password = bcrypt.hashpw(
+        user_data.password.encode("utf-8"),
+        bcrypt.gensalt()
+    ).decode("utf-8")
 
-    # create User object
+    # Create User object
     new_user = User(
         username=user_data.username,
         email=user_data.email,
         password_hash=hashed_password,
-        phone=user_data.phone  # make sure this matches DB column
+        phone=user_data.phone
     )
 
     db.add(new_user)
@@ -26,16 +30,16 @@ def create_user(user_data, db: Session):
     return new_user
 
 def authenticate_user(email: str, password: str, db: Session):
-    """
-    Returns the User object if email/password match, otherwise None.
-    """
     # Find user by email
     user = db.query(User).filter(User.email == email).first()
     if not user:
         return None
-    
-    # Verify password
-    if not bcrypt.verify(password, user.password_hash):
+
+    # Verify password correctly using bcrypt directly
+    if not bcrypt.checkpw(
+        password.encode("utf-8"),
+        user.password_hash.encode("utf-8")
+    ):
         return None
-    
+
     return user
