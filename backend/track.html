@@ -2,31 +2,35 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Live Safety Tracker</title>
-    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;600&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Safety Tracker</title>
+    <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;600&family=Inter:wght@300;400;500;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
         :root {
-            --red: #FF2D2D;
-            --red-dim: #7a1414;
-            --bg: #0a0a0a;
-            --surface: #111111;
-            --surface2: #1a1a1a;
-            --border: #222222;
-            --text: #f0f0f0;
-            --text-dim: #666666;
+            --blue: #3B82F6;
+            --blue-light: #EFF6FF;
+            --blue-mid: #BFDBFE;
+            --green: #10B981;
+            --green-light: #ECFDF5;
+            --bg: #F8FAFC;
+            --surface: #FFFFFF;
+            --border: #E2E8F0;
+            --text: #1E293B;
+            --text-mid: #64748B;
+            --text-light: #94A3B8;
+            --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04);
+            --shadow-md: 0 4px 6px rgba(0,0,0,0.07), 0 2px 4px rgba(0,0,0,0.05);
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
-
         html, body { height: 100%; width: 100%; }
 
         body {
             background: var(--bg);
             color: var(--text);
-            font-family: 'DM Sans', sans-serif;
+            font-family: 'Inter', sans-serif;
             display: flex;
             flex-direction: column;
             height: 100vh;
@@ -36,176 +40,236 @@
         header {
             background: var(--surface);
             border-bottom: 1px solid var(--border);
-            padding: 14px 20px;
+            padding: 14px 16px;
             display: flex;
             align-items: center;
             justify-content: space-between;
             flex-shrink: 0;
+            box-shadow: var(--shadow);
             z-index: 1000;
         }
 
-        .header-left { display: flex; align-items: center; gap: 12px; }
+        .header-left { display: flex; align-items: center; gap: 10px; }
 
-        .pulse-dot {
-            width: 10px; height: 10px;
-            background: var(--red);
-            border-radius: 50%;
-            position: relative;
-            flex-shrink: 0;
-        }
-
-        .pulse-dot::after {
-            content: '';
-            position: absolute;
-            inset: -4px;
-            border-radius: 50%;
-            border: 2px solid var(--red);
-            animation: pulse 1.5s ease-out infinite;
-        }
-
-        @keyframes pulse {
-            0% { transform: scale(1); opacity: 1; }
-            100% { transform: scale(2.5); opacity: 0; }
-        }
-
-        .header-title {
-            font-family: 'Space Mono', monospace;
-            font-size: 13px;
-            font-weight: 700;
-            letter-spacing: 0.15em;
-            text-transform: uppercase;
-            color: var(--red);
-        }
-
-        .status-badge {
-            font-family: 'Space Mono', monospace;
-            font-size: 11px;
-            padding: 4px 10px;
-            border-radius: 2px;
-            letter-spacing: 0.1em;
-            text-transform: uppercase;
-        }
-
-        .status-live { background: var(--red-dim); color: var(--red); border: 1px solid var(--red); }
-        .status-waiting { background: #1a1a1a; color: var(--text-dim); border: 1px solid var(--border); }
-
-        .info-bar {
-            background: var(--surface2);
-            border-bottom: 1px solid var(--border);
-            padding: 10px 20px;
-            display: flex;
-            align-items: center;
-            gap: 20px;
-            flex-shrink: 0;
-        }
-
-        .info-item { display: flex; flex-direction: column; gap: 2px; }
-
-        .info-label {
-            font-family: 'Space Mono', monospace;
-            font-size: 9px;
-            letter-spacing: 0.15em;
-            text-transform: uppercase;
-            color: var(--text-dim);
-        }
-
-        .info-value { font-size: 13px; font-weight: 600; color: var(--text); }
-
-        .info-divider { width: 1px; height: 28px; background: var(--border); }
-
-        /* map wrapper takes all remaining space */
-        .map-wrapper { flex: 1; position: relative; overflow: hidden; }
-
-        /* map fills the wrapper completely using absolute positioning */
-        #map { position: absolute; top: 0; left: 0; right: 0; bottom: 0; }
-
-        .alert-banner {
-            background: var(--red);
-            padding: 12px 20px;
+        .app-logo {
+            width: 32px;
+            height: 32px;
+            background: var(--blue);
+            border-radius: 8px;
             display: flex;
             align-items: center;
             justify-content: center;
+            font-size: 16px;
+        }
+
+        .app-name {
+            font-family: 'Fraunces', serif;
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text);
+            letter-spacing: -0.02em;
+        }
+
+        .status-pill {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+
+        .status-pill.live { background: var(--green-light); color: var(--green); }
+        .status-pill.waiting { background: var(--blue-light); color: var(--blue); }
+
+        .status-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: currentColor;
+        }
+
+        .status-dot.live { animation: blink 1.5s ease-in-out infinite; }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        .person-card {
+            background: var(--surface);
+            margin: 12px 16px;
+            border-radius: 16px;
+            padding: 16px;
+            box-shadow: var(--shadow-md);
+            border: 1px solid var(--border);
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: var(--blue-light);
+            border: 2px solid var(--blue-mid);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Fraunces', serif;
+            font-size: 20px;
+            color: var(--blue);
             flex-shrink: 0;
         }
 
-        .alert-banner span {
-            font-family: 'Space Mono', monospace;
-            font-size: 11px;
-            font-weight: 700;
-            letter-spacing: 0.15em;
+        .person-info { flex: 1; }
+
+        .person-name {
+            font-family: 'Fraunces', serif;
+            font-size: 20px;
+            font-weight: 600;
+            color: var(--text);
+            letter-spacing: -0.02em;
+            margin-bottom: 3px;
+        }
+
+        .person-subtitle { font-size: 13px; color: var(--text-mid); }
+
+        .info-row {
+            display: flex;
+            gap: 8px;
+            padding: 0 16px 12px;
+            flex-shrink: 0;
+            overflow-x: auto;
+            scrollbar-width: none;
+        }
+
+        .info-row::-webkit-scrollbar { display: none; }
+
+        .info-pill {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 8px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            flex-shrink: 0;
+            box-shadow: var(--shadow);
+        }
+
+        .pill-label {
+            font-size: 10px;
+            font-weight: 500;
             text-transform: uppercase;
-            color: white;
+            letter-spacing: 0.08em;
+            color: var(--text-light);
         }
 
-        .emergency-marker {
-            width: 20px; height: 20px;
-            background: var(--red);
-            border-radius: 50%;
-            border: 3px solid white;
-            box-shadow: 0 0 0 4px rgba(255, 45, 45, 0.4);
-            animation: markerPulse 2s ease-out infinite;
+        .pill-value {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text);
+            white-space: nowrap;
         }
 
-        @keyframes markerPulse {
-            0%, 100% { box-shadow: 0 0 0 4px rgba(255, 45, 45, 0.4); }
-            50% { box-shadow: 0 0 0 12px rgba(255, 45, 45, 0); }
+        .map-wrapper {
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            margin: 0 16px 16px;
+            border-radius: 16px;
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-md);
         }
+
+        #map { position: absolute; top: 0; left: 0; right: 0; bottom: 0; }
 
         #waiting-overlay {
-            position: absolute; inset: 0;
-            background: rgba(10, 10, 10, 0.85);
+            position: absolute;
+            inset: 0;
+            background: rgba(248, 250, 252, 0.92);
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
-            gap: 16px;
+            gap: 12px;
             z-index: 999;
             pointer-events: none;
-        }
-
-        .waiting-text {
-            font-family: 'Space Mono', monospace;
-            font-size: 12px;
-            letter-spacing: 0.2em;
-            text-transform: uppercase;
-            color: var(--text-dim);
+            border-radius: 16px;
         }
 
         .waiting-spinner {
-            width: 32px; height: 32px;
-            border: 2px solid var(--border);
-            border-top-color: var(--red);
+            width: 36px;
+            height: 36px;
+            border: 3px solid var(--border);
+            border-top-color: var(--blue);
             border-radius: 50%;
             animation: spin 1s linear infinite;
         }
 
         @keyframes spin { to { transform: rotate(360deg); } }
+
+        .waiting-text { font-size: 13px; font-weight: 500; color: var(--text-mid); }
+
+        .location-marker {
+            width: 24px;
+            height: 24px;
+            background: var(--blue);
+            border-radius: 50%;
+            border: 3px solid white;
+            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.5);
+            animation: markerPulse 2s ease-out infinite;
+        }
+
+        @keyframes markerPulse {
+            0%, 100% { box-shadow: 0 2px 8px rgba(59, 130, 246, 0.5), 0 0 0 0 rgba(59, 130, 246, 0.3); }
+            50% { box-shadow: 0 2px 8px rgba(59, 130, 246, 0.5), 0 0 0 12px rgba(59, 130, 246, 0); }
+        }
+
+        .safe-banner {
+            background: var(--blue-light);
+            border-top: 1px solid var(--blue-mid);
+            padding: 10px 16px;
+            text-align: center;
+            flex-shrink: 0;
+        }
+
+        .safe-banner p { font-size: 12px; color: var(--blue); font-weight: 500; }
     </style>
 </head>
 <body>
 
     <header>
         <div class="header-left">
-            <div class="pulse-dot"></div>
-            <span class="header-title">Emergency Tracker</span>
+            <div class="app-logo">🛡️</div>
+            <span class="app-name">SafeTrack</span>
         </div>
-        <span class="status-badge status-waiting" id="status-badge">Connecting...</span>
+        <div class="status-pill waiting" id="status-pill">
+            <div class="status-dot" id="status-dot"></div>
+            <span id="status-text">Connecting...</span>
+        </div>
     </header>
 
-    <div class="info-bar">
-        <div class="info-item">
-            <span class="info-label">Tracking</span>
-            <span class="info-value" id="tracking-name">—</span>
+    <div class="person-card">
+        <div class="avatar" id="avatar">?</div>
+        <div class="person-info">
+            <div class="person-name" id="person-name">Loading...</div>
+            <div class="person-subtitle">📍 Location is being shared with you</div>
         </div>
-        <div class="info-divider"></div>
-        <div class="info-item">
-            <span class="info-label">Last Update</span>
-            <span class="info-value" id="last-update">—</span>
+    </div>
+
+    <div class="info-row">
+        <div class="info-pill">
+            <span class="pill-label">Last Update</span>
+            <span class="pill-value" id="last-update">—</span>
         </div>
-        <div class="info-divider"></div>
-        <div class="info-item">
-            <span class="info-label">Coordinates</span>
-            <span class="info-value" id="coordinates">—</span>
+        <div class="info-pill">
+            <span class="pill-label">Coordinates</span>
+            <span class="pill-value" id="coordinates">—</span>
         </div>
     </div>
 
@@ -217,29 +281,38 @@
         </div>
     </div>
 
-    <div class="alert-banner">
-        <span>🚨 Emergency Alert Active — Share this page with emergency services</span>
+    <div class="safe-banner">
+        <p>🔒 This page updates automatically — no need to refresh</p>
     </div>
 
     <script>
-        // get the user id from the URL e.g. /track/user1 → user1
+        // get user id from URL e.g. /track/hannah → hannah
         const pathParts = window.location.pathname.split('/');
         const userId = pathParts[pathParts.length - 1];
-        document.getElementById('tracking-name').textContent = userId;
+
+        // format name nicely — capitalize first letter, remove dashes/underscores
+        const formattedName = userId
+            .replace(/[-_]/g, ' ')
+            .replace(/\b\w/g, l => l.toUpperCase());
+
+        // set name and avatar initial
+        document.getElementById('person-name').textContent = formattedName;
+        document.getElementById('avatar').textContent = formattedName.charAt(0).toUpperCase();
 
         // initialize map centered on Clemson campus
         const map = L.map('map', { zoomControl: true }).setView([34.6834, -82.8374], 15);
 
-        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors'
+        // voyager tiles — clean and colorful
+        L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+            attribution: '© OpenStreetMap © CARTO'
         }).addTo(map);
 
-        // custom red pulsing marker
-        const emergencyIcon = L.divIcon({
+        // blue pulsing marker
+        const locationIcon = L.divIcon({
             className: '',
-            html: '<div class="emergency-marker"></div>',
-            iconSize: [20, 20],
-            iconAnchor: [10, 10]
+            html: '<div class="location-marker"></div>',
+            iconSize: [24, 24],
+            iconAnchor: [12, 12]
         });
 
         let marker = null;
@@ -251,9 +324,11 @@
 
         ws.onopen = () => {
             console.log('WebSocket connected!');
-            const badge = document.getElementById('status-badge');
-            badge.textContent = 'Live';
-            badge.className = 'status-badge status-live';
+            const pill = document.getElementById('status-pill');
+            const dot = document.getElementById('status-dot');
+            pill.className = 'status-pill live';
+            dot.className = 'status-dot live';
+            document.getElementById('status-text').textContent = 'Live';
         };
 
         ws.onmessage = (event) => {
@@ -269,17 +344,17 @@
                     firstLocation = false;
                 }
 
-                // move existing marker or create new one
+                // move or create marker
                 if (marker) {
                     marker.setLatLng([lat, lng]);
                 } else {
-                    marker = L.marker([lat, lng], { icon: emergencyIcon }).addTo(map);
+                    marker = L.marker([lat, lng], { icon: locationIcon }).addTo(map);
                 }
 
-                // pan map to follow the marker
+                // pan map to follow marker
                 map.setView([lat, lng], 16, { animate: true });
 
-                // update info bar
+                // update info pills
                 document.getElementById('last-update').textContent = new Date().toLocaleTimeString();
                 document.getElementById('coordinates').textContent = `${lat.toFixed(4)}, ${lng.toFixed(4)}`;
             }
@@ -287,9 +362,11 @@
 
         ws.onclose = () => {
             console.log('WebSocket disconnected!');
-            const badge = document.getElementById('status-badge');
-            badge.textContent = 'Disconnected';
-            badge.className = 'status-badge status-waiting';
+            const pill = document.getElementById('status-pill');
+            const dot = document.getElementById('status-dot');
+            pill.className = 'status-pill waiting';
+            dot.className = 'status-dot';
+            document.getElementById('status-text').textContent = 'Reconnecting...';
         };
 
         ws.onerror = (error) => {
