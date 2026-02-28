@@ -4,7 +4,7 @@ const API_URL = process.env.EXPO_PUBLIC_IP_ADDRESS;
 
 // Helper to get the token
 export async function getToken() {
-  return await AsyncStorage.getItem('token');
+  return await SecureStore.getItem('token');
 }
 
 // Login function
